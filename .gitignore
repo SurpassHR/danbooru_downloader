@@ -1,2 +1,6 @@
 .vscode
 log
+.venv
+downloads
+cache_page_urls.json
+cache_image_urls.json
