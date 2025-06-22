@@ -23,11 +23,24 @@ DOWNLOAD_PATH = "./downloads"
 requests.packages.urllib3.disable_warnings(requests.packages.urllib3.exceptions.InsecureRequestWarning) # type: ignore
 
 def crawl(url: str, pat: re.Pattern) -> list:
-    resp = requests.request(
-        method="GET",
-        url=url,
-        verify=False,
-    )
+    try:
+        resp = requests.request(
+            method="GET",
+            url=url,
+            verify=False,
+            timeout=10,
+        )
+        # 如果失败自动重试一次
+        if resp.status_code != 200:
+            resp = requests.request(
+                method="GET",
+                url=url,
+                verify=False,
+                timeout=10,
+            )
+    except Exception as e:
+        print(f"请求失败 {url}: {str(e)}")
+        return []
     respCode = resp.status_code
     if respCode != 200:
         print(f"请求失败，状态码：{respCode}")
@@ -64,12 +77,15 @@ def fetch_page_urls(url: str) -> None:
         page_num = int(page_list[-1]) if page_list and len(page_list) > 0 else 0
 
         image_page_links = []
-        pool = ThreadPool(processes=5)
+        pool = ThreadPool(processes=3)
         href_pat = re.compile("<a class=\"post-preview-link\" draggable=\"false\" href=\"(.*?)\">")
-        for page in tqdm(range(1, page_num + 1)):
+        async_results = []
+        for page in range(1, page_num + 1):
             page_url = f"{url}&page={page}"
-            async_result = pool.apply_async(crawl, (page_url, href_pat))
-            image_page_links.extend(async_result.get())
+            async_results.append(pool.apply_async(crawl, (page_url, href_pat)))
+
+        for result in tqdm(async_results):
+            image_page_links.extend(result.get())
 
         image_page_links = [f"{BASE_URL}{link}" for link in image_page_links]
         dumpListToFile(image_page_links, CACHE_PAGE_URL_FILE)
@@ -91,13 +107,12 @@ def fetch_each_url_page() -> None:
         pool = ThreadPool(processes=5)
         img_pat = re.compile(r'<section .* data-file-url="(.*?)">.*?</section>', flags=re.S)
 
-        cnt = 1
-        for url in tqdm(url_list):
-            if cnt > 10:
-                break
-            async_result = pool.apply_async(crawl, (url, img_pat))
-            image_urls.extend(async_result.get())
-            cnt += 1
+        async_results = []
+        for url in url_list:
+            async_results.append(pool.apply_async(crawl, (url, img_pat)))
+
+        for result in tqdm(async_results):
+            image_urls.extend(result.get())
 
         if image_urls:
             dumpListToFile(image_urls, CACHE_IMG_URL_FILE)
@@ -133,8 +148,12 @@ def download_images(url_list: list, output_dir: str = DOWNLOAD_PATH) -> None:
         except Exception as e:
             print(f"下载失败 {url}: {str(e)}")
 
-    with ThreadPool(processes=10) as pool:  # 增加线程数
-        list(tqdm(pool.imap(download_file, url_list), total=len(url_list)))
+    with ThreadPool(processes=5) as pool: # 增加线程数
+        # 使用map替代imap确保并发执行
+        results = pool.map(download_file, url_list)
+        # 仍然使用tqdm显示进度
+        for _ in tqdm(results, total=len(url_list)):
+            pass
 
 if __name__ == "__main__":
     fetch_page_urls(req_url)
