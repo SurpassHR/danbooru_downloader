@@ -20,6 +20,10 @@ CACHE_PAGE_URL_FILE = "./cache_page_urls.json"
 CACHE_IMG_URL_FILE = "./cache_image_urls.json"
 DOWNLOAD_PATH = "./downloads"
 
+# Do not make it too big or you'll get 403 err.
+PAGE_FETCHING_THREADS = 3 # fetching data from pages
+URL_FETCHING_THREADS = 5 # fetching data from urls
+
 requests.packages.urllib3.disable_warnings(requests.packages.urllib3.exceptions.InsecureRequestWarning) # type: ignore
 
 def crawl(url: str, pat: re.Pattern) -> list:
@@ -39,11 +43,11 @@ def crawl(url: str, pat: re.Pattern) -> list:
                 timeout=10,
             )
     except Exception as e:
-        print(f"请求失败 {url}: {str(e)}")
+        print(f"Request fail {url}: {str(e)}")
         return []
     respCode = resp.status_code
     if respCode != 200:
-        print(f"请求失败，状态码：{respCode}")
+        print(f"Request fail, status code：{respCode}")
         return []
 
     content = resp.text
@@ -64,6 +68,7 @@ def dumpListToFile(dataList: list, fileName: str, firstWrite: bool = True) -> No
                 f.seek(0)
                 f.truncate()
                 json.dump(dataList, f, ensure_ascii=False, indent=4)
+                f.flush()
 
 def readJson(filePath: str) -> list:
     with open(filePath, 'r', encoding='utf-8') as jsonFile:
@@ -72,22 +77,25 @@ def readJson(filePath: str) -> list:
 
 def fetch_page_urls(url: str) -> None:
     if not os.path.exists(CACHE_PAGE_URL_FILE):
+        print(f"{CACHE_PAGE_URL_FILE} not exists.")
         page_num_pattern = re.compile("<a class=\"paginator-page desktop-only\" href=\".*\">(.*?)</a>")
         page_list = crawl(url, page_num_pattern)
         page_num = int(page_list[-1]) if page_list and len(page_list) > 0 else 0
 
         image_page_links = []
-        pool = ThreadPool(processes=3)
+        pool = ThreadPool(processes=PAGE_FETCHING_THREADS)
         href_pat = re.compile("<a class=\"post-preview-link\" draggable=\"false\" href=\"(.*?)\">")
         async_results = []
+        # print(f"crawling image page url in result page range: {1}~{page_num}")
         for page in range(1, page_num + 1):
             page_url = f"{url}&page={page}"
             async_results.append(pool.apply_async(crawl, (page_url, href_pat)))
 
-        for result in tqdm(async_results):
+        for result in tqdm(async_results, desc="Crawling image page urls"):
             image_page_links.extend(result.get())
 
         image_page_links = [f"{BASE_URL}{link}" for link in image_page_links]
+        print(f"{CACHE_PAGE_URL_FILE} url list cached.")
         dumpListToFile(image_page_links, CACHE_PAGE_URL_FILE)
 
 """
@@ -102,55 +110,104 @@ def fetch_page_urls(url: str) -> None:
 
 def fetch_each_url_page() -> None:
     if not os.path.exists(CACHE_IMG_URL_FILE):
+        print(f"{CACHE_IMG_URL_FILE} not exists.")
         url_list = readJson(CACHE_PAGE_URL_FILE)
         image_urls = []
-        pool = ThreadPool(processes=5)
+        pool = ThreadPool(processes=URL_FETCHING_THREADS)
         img_pat = re.compile(r'<section .* data-file-url="(.*?)">.*?</section>', flags=re.S)
 
         async_results = []
+        # print("crawling raw image urls.")
         for url in url_list:
             async_results.append(pool.apply_async(crawl, (url, img_pat)))
 
-        for result in tqdm(async_results):
+        for result in tqdm(async_results, desc="Crawling raw image urls"):
             image_urls.extend(result.get())
 
         if image_urls:
             dumpListToFile(image_urls, CACHE_IMG_URL_FILE)
+            print(f"{CACHE_IMG_URL_FILE} img url list cached.")
 
 def download_images(url_list: list, output_dir: str = DOWNLOAD_PATH) -> None:
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
 
     session = requests.Session()
-    adapter = requests.adapters.HTTPAdapter(
-        pool_connections=20,
-        pool_maxsize=20,
-        max_retries=3
-    )
+    # 配置重试策略
+    retries = requests.adapters.Retry(total=3, backoff_factor=0.1, status_forcelist=[500, 502, 503, 504])
+    adapter = requests.adapters.HTTPAdapter(max_retries=retries)
     session.mount('https://', adapter)
     session.mount('http://', adapter)
 
     def download_file(url: str) -> None:
-        try:
-            filename = os.path.basename(url)
-            filepath = os.path.join(output_dir, filename)
+        filename = os.path.basename(url)
+        filepath = os.path.join(output_dir, filename)
+        temp_filepath = filepath + ".part" # 使用临时文件后缀
 
+        try:
+            # 检查是否已完成下载（通过临时文件判断）
             if os.path.exists(filepath):
+                print(f"The file already exists. Skip the download: {filename}")
                 return
 
-            with session.get(url, stream=True, verify=False, timeout=10) as response:
-                if response.status_code == 200:
-                    with open(filepath, 'wb') as f:
-                        for chunk in response.iter_content(8192):  # 增大chunk大小
-                            f.write(chunk)
-                else:
-                    print(f"下载失败 {url}: HTTP {response.status_code}")
-        except Exception as e:
-            print(f"下载失败 {url}: {str(e)}")
+            headers = {}
+            mode = 'wb'
+            start_byte = 0
 
-    with ThreadPool(processes=5) as pool: # 增加线程数
-        # 使用map替代imap确保并发执行
-        results = pool.map(download_file, url_list)
+            # 尝试断点续传
+            if os.path.exists(temp_filepath):
+                start_byte = os.path.getsize(temp_filepath)
+                headers = {'Range': f'bytes={start_byte}-'}
+                mode = 'ab' # 追加写入模式
+                print(f"Resume download: {filename} from byte {start_byte}")
+
+            with session.get(url, stream=True, verify=False, timeout=30, headers=headers) as response:
+                if response.status_code == 200: # 首次下载或服务器不支持Range
+                    if start_byte > 0: # 如果之前有下载部分，但服务器不支持Range，则重新下载
+                        start_byte = 0
+                        mode = 'wb'
+                        print(f"The server does not support resuming from breakpoint or re-downloading if the file has been updated: {filename}")
+
+                elif response.status_code == 206: # 服务器支持断点续传
+                    # 检查已下载部分是否完整且与服务器端文件长度一致
+                    content_range = response.headers.get('Content-Range')
+                    if content_range:
+                        import re
+                        match = re.match(r'bytes (\d+)-(\d+)/(\d+)', content_range)
+                        if match:
+                            range_start, range_end, total_size = map(int, match.groups())
+                            if range_start != start_byte:
+                                print(f"Warning: The starting byte of the request does not match the server response. Download again: {filename}")
+                                start_byte = 0
+                                mode = 'wb'
+                            # 可以在这里进一步检查文件总大小，如果本地文件大小加上本次下载内容超过总大小，可能需要重新下载
+
+                else:
+                    print(f"Download fail {url}: HTTP {response.status_code}")
+                    return
+
+                # 打开或创建临时文件
+                with open(temp_filepath, mode) as f:
+                    for chunk in response.iter_content(8192):
+                        if chunk: # 确保接收到的数据块不为空
+                            f.write(chunk)
+                            f.flush() # 强制刷新文件缓冲到磁盘
+
+                # 下载完成后，重命名临时文件为正式文件
+                os.rename(temp_filepath, filepath)
+                # print(f"下载成功: {filename}")
+
+        except requests.exceptions.RequestException as req_e:
+            print(f"Download request err {url}: {req_e}")
+            # 如果请求错误，临时文件会保留，以便下次继续下载
+        except Exception as e:
+            print(f"Download unknown err {url}: {str(e)}")
+            # 发生其他错误时，临时文件也会保留
+
+    with ThreadPool(processes=URL_FETCHING_THREADS) as pool:
+        results = []
+        # 使用map替代imap确保并发执行，并直接收集结果
+        results = list(tqdm(pool.imap_unordered(download_file, url_list), total=len(url_list), desc="Downloading images"))
         # 仍然使用tqdm显示进度
         for _ in tqdm(results, total=len(url_list)):
             pass
