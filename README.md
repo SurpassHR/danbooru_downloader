@@ -1,32 +1,27 @@
 <div align="center">
-    <img src="assets/images/banner.png" width=400px>
+  <h1><a href="https://danbooru.donmai.us"><img src="assets/icon.png" alt="Danbooru Logo" width="24" height="24"></a><a href="https://danbooru.donmai.us">  Danbooru</a> Downloader</h1>
 </div>
 
-## ✒️简介
+- Download raw images from https://danbooru.donmai.us.
 
-- 💡本项目是一个模板仓库，目的是为了更便捷地开发带有用户界面的小工具。README 横幅使用 Flux Schnell 扩散模型生成。
+- Download filter supports `OR` and `NOT` operator, refer to https://danbooru.donmai.us/wiki_pages/help:blacklists.
 
-- 📓项目依赖:
+- Suggested python version >= 3.12.
 
-    - Python>=3.12
-    - PySide6-Essentials==6.9.1
-    - PySide6-Fluent-Widgets==1.8.3
-    - rich==14.0.0
-    - pyinstaller==6.14.2
+- Support resuming downloads from break point.
 
-- ⚙️项目全部配置文件均放置在 `config` 下，包括开发依赖 `requirements.txt` 和运行配置 `config.json`，
-`config.json` 运行配置在打包时会被正确包含到包内。
+- Display download progress using tqdm.
 
-- 📦项目打包方式是 `pyinstaller`，打包时直接执行 `python pyinstaller.py`。
+- GUI template from [SurpassHR/PySide6-Application-Template](https://github.com/SurpassHR/PySide6-Application-Template)
 
-- 🖼️`assets` 中存放项目的静态资源，例如图标等。
+## Usage
 
-- 🛠️`init_dev_env.sh` 用于初始化开发环境，主要是初始化 `venv` 环境、激活环境、安装 `requirements.txt` 中配置的依赖、配置 `.git/info/exclude` 中的文件黑名单（懒得配置 `.gitignore`，但是也会包含一个 `.gitignore` 文件）。
+- Run `init_dev_env.sh`.
 
-## 📝Todo
+- Change `downloader.py` Line.13 `TAG_LIST` to your target tags.
 
-- [ ] 开发过程中逐步增加新的复杂组件。
+- Run `downloader.py`.
 
-- [ ] 将自造轮子的 `simpleLogger` 替换为 `logging` 库。
+- Find your results in `downloads` folder.
 
-- [ ] 增加 `.github/workflows` 部署自动打包发布流程。
+> Every time you start a new download job, it's suggested deleting `./cache_page_urls.json`, `./cache_image_urls.json`, `./downloads` manually.
