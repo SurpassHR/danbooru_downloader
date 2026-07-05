@@ -6,7 +6,7 @@ from qfluentwidgets import (
     CardWidget, StrongBodyLabel, BodyLabel, CaptionLabel,
     PrimaryPushButton, PushButton, FluentIcon, LineEdit,
     SpinBox, TextEdit, ProgressBar,
-    InfoBar,
+    InfoBar, SwitchButton,
 )
 
 from ...service.downloadWorker import DownloadWorker
@@ -103,6 +103,17 @@ class DownloadPage(QFrame):
 
         threadRow.addStretch(1)
         cardLayout.addLayout(threadRow)
+
+        # Rename status
+        renameRow = QHBoxLayout()
+        renameRow.addWidget(BodyLabel("命名:", card))
+        self.renameStatus = BodyLabel("", card)
+        renameRow.addWidget(self.renameStatus)
+        self.settingsBtn = PushButton("设置", card, icon=FluentIcon.SETTING)
+        self.settingsBtn.clicked.connect(self._openSettings)
+        renameRow.addWidget(self.settingsBtn)
+        renameRow.addStretch(1)
+        cardLayout.addLayout(renameRow)
 
         # Control buttons
         btnRow = QHBoxLayout()
@@ -265,6 +276,30 @@ class DownloadPage(QFrame):
         self._thread = None
         self._worker = None
 
+    def _openSettings(self):
+        """打开设置页面。"""
+        self.window.switchToSettings()
+
+    def _updateRenameStatus(self):
+        """从 config 读取重命名状态并更新显示。"""
+        from ...common.configLoader import getConfig
+        enabled = getConfig("settings.rename_enabled", False)
+        if not enabled:
+            self.renameStatus.setText("未启用")
+            return
+        mode = getConfig("settings.rename_mode", "pattern")
+        if mode == "sequence":
+            prefix = getConfig("settings.rename_prefix", "danbooru_")
+            self.renameStatus.setText(f"序号 - 前缀: {prefix}")
+        else:
+            pattern = getConfig("settings.rename_pattern", "{post_id}_{artist}_...")
+            self.renameStatus.setText(f"模板 - {pattern}")
+
+    def showEvent(self, event):
+        """页面显示时刷新命名状态（可能从设置页返回）。"""
+        self._updateRenameStatus()
+        super().showEvent(event)
+
     def _log(self, msg: str):
         self.logOutput.append(msg)
         # Auto-scroll to bottom
@@ -289,6 +324,7 @@ class DownloadPage(QFrame):
         savedUrlThreads = getConfig("download_page.url_threads", None)
         if savedUrlThreads is not None:
             self.urlThreadsBox.setValue(savedUrlThreads)
+        self._updateRenameStatus()
 
     def _saveCurrentState(self):
         """将当前标签、下载路径和线程数保存到配置。"""

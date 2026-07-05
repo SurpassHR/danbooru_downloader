@@ -46,7 +46,7 @@ class DownloadWorker(QObject):
         super().__init__(parent)
         self._downloader = None
 
-    def start(self, tags: list, downloadRoot: str, pageThreads: int, urlThreads: int):
+    def start(self, tags: list, downloadRoot: str, pageThreads: int, urlThreads: int, renameConfig: dict = None):
         """Start the download in a background thread."""
         self._downloader = DanbooruDownloader(
             lsTags=tags,
@@ -54,6 +54,7 @@ class DownloadWorker(QObject):
             iPageThreads=pageThreads,
             iUrlThreads=urlThreads,
             fnProgress=self._emitProgress,
+            dRenameConfig=renameConfig,
         )
         self._run()
 

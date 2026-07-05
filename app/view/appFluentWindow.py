@@ -16,6 +16,7 @@ from ..common.simpleLogger import loggerPrint
 from ..common.configLoader import getConfig, setConfig
 from ..common.uiFunctionBase import uiFuncBase
 from ..view.page.downloadPage import DownloadPage
+from ..view.page.settingsPage import SettingsPage
 
 
 class AppFluentWindow(FluentWindow):
@@ -84,8 +85,22 @@ class AppFluentWindow(FluentWindow):
         self.addSubInterface(
             DownloadPage("_downloadPage", self), FluentIcon.DOWNLOAD, "下载", NavigationItemPosition.SCROLL
         )
+        self.addSubInterface(
+            SettingsPage("_settingsPage", self), FluentIcon.SETTING, "设置", NavigationItemPosition.SCROLL
+        )
         self.addProjectMainPageHyperlink()
         self.addThemeChangingWidget()
+        self._settingsPage = None
+
+    def switchToSettings(self):
+        """导航到设置页面。"""
+        if not self._settingsPage:
+            self._settingsPage = self.findChild(SettingsPage)
+        if self._settingsPage:
+            nav_item = self.navigationInterface.widget("_settingsPage")
+            if nav_item:
+                nav_item.click()
+
 
     def addProjectMainPageHyperlink(self) -> None:
         def _openProjectPage() -> None:
