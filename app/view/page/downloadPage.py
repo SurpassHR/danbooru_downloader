@@ -11,6 +11,7 @@ from qfluentwidgets import (
 
 from ...service.downloadWorker import DownloadWorker
 from ...widget.tagAutocomplete import TagAutocomplete
+from ...common.configLoader import getConfig, setConfig
 
 
 class DownloadPage(QFrame):
@@ -44,6 +45,9 @@ class DownloadPage(QFrame):
 
         # 4. Log card
         self._buildLogCard(layout)
+
+        # --- Restore saved state ---
+        self._restoreSavedState()
 
     # ---- UI Builders ----
 
@@ -181,6 +185,9 @@ class DownloadPage(QFrame):
         self._log(f"开始下载: tags={tags}, path={downloadRoot}")
         self._log(f"线程配置: 爬取={pageThreads}, 下载={urlThreads}")
 
+        # 保存当前配置以便下次启动恢复
+        self._saveCurrentState()
+
         # Setup worker thread
         self._thread = QThread(self)
         self._worker = DownloadWorker()
@@ -263,3 +270,24 @@ class DownloadPage(QFrame):
         # Auto-scroll to bottom
         scrollbar = self.logOutput.verticalScrollBar()
         scrollbar.setValue(scrollbar.maximum())
+
+    # ---- Config persistence ----
+
+    def _restoreSavedState(self):
+        """从配置恢复上次退出前保存的标签和下载路径。"""
+        savedTags = getConfig("download_page.last_tags", "")
+        if savedTags:
+            self.tagInput.setText(savedTags)
+        savedPath = getConfig("download_page.last_path", "")
+        if savedPath:
+            self.pathInput.setText(savedPath)
+
+    def _saveCurrentState(self):
+        """将当前标签和下载路径保存到配置。"""
+        setConfig("download_page.last_tags", self.tagInput.text().strip())
+        setConfig("download_page.last_path", self.pathInput.text().strip())
+
+    def hideEvent(self, event):
+        """页面隐藏（切换标签页/关闭窗口）时自动保存当前配置。"""
+        self._saveCurrentState()
+        super().hideEvent(event)

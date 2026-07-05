@@ -1,6 +1,14 @@
 # coding: utf-8
 import sys
 import platform
+import os
+
+# Linux: 强制使用 GTK3 平台主题 + xdg-desktop-portal，使文件选择器调用系统原生的 portal 对话框
+# （而非 Qt 自带的回退对话框/Wine 风格）
+if sys.platform.startswith("linux"):
+    if "QT_QPA_PLATFORMTHEME" not in os.environ:
+        os.environ["QT_QPA_PLATFORMTHEME"] = "gtk3"
+    os.environ.setdefault("GTK_USE_PORTAL", "1")
 
 from PySide6.QtWidgets import QApplication
 from PySide6.QtCore import Qt
