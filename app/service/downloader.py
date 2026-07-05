@@ -122,6 +122,10 @@ class DanbooruDownloader:
         self._bCancelled = True
         print("Cancellation requested...")
 
+    def fnIsCancelled(self) -> bool:
+        """Returns whether cancellation has been requested."""
+        return self._bCancelled
+
     def fnDownload(self):
         """Starts the download process with robust error handling and resumption."""
         try:

@@ -38,7 +38,7 @@ class DownloadWorker(QObject):
             self.progressUpdated.emit(
                 progress["total"], progress["completed"], progress["description"]
             )
-            success = not self._downloader._bCancelled
+            success = not self._downloader.fnIsCancelled()
             self.finished.emit(success)
         except Exception as e:
             self.logMessage.emit(f"Download error: {e}")
