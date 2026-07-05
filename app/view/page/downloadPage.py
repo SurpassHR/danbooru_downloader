@@ -199,7 +199,7 @@ class DownloadPage(QFrame):
             self._worker.cancel()
 
     def _pollProgress(self):
-        if not self._worker:
+        if not self._worker or not self._worker._downloader:
             return
         try:
             prog = self._worker.getProgress()
