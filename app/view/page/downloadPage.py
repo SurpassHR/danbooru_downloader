@@ -136,7 +136,7 @@ class DownloadPage(QFrame):
         self.logOutput.setReadOnly(True)
         self.logOutput.setMinimumHeight(150)
 
-        clearBtn = PushButton("清空", card, icon=FluentIcon.CLEAR)
+        clearBtn = PushButton("清空", card, icon=FluentIcon.DELETE)
         clearBtn.clicked.connect(self.logOutput.clear)
 
         cardLayout.addWidget(title)
