@@ -53,8 +53,13 @@ class DownloadWorker(QObject):
             sDownloadRoot=downloadRoot,
             iPageThreads=pageThreads,
             iUrlThreads=urlThreads,
+            fnProgress=self._emitProgress,
         )
         self._run()
+
+    def _emitProgress(self, total: int, completed: int, description: str):
+        """Thread-safe progress update via Qt Signal."""
+        self.progressUpdated.emit(total, completed, description)
 
     def cancel(self):
         """Request cancellation."""

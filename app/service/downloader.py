@@ -18,6 +18,7 @@ class DanbooruDownloader:
         sDownloadRoot: str = "./downloads",
         iPageThreads: int = 3,
         iUrlThreads: int = 3,
+        fnProgress=None,
     ):
         """
 
@@ -25,6 +26,7 @@ class DanbooruDownloader:
         :param sDownloadRoot: 下载根目录（图片保存至 images/ 子目录）
         :param iPageThreads: 并发请求页数的线程数
         :param iUrlThreads: 并发下载图片的线程数
+        :param fnProgress: 进度回调函数，签名 (total, completed, description)
         """
         self.sBaseUrl = "https://danbooru.donmai.us"
         self.lsTags = lsTags
@@ -36,6 +38,7 @@ class DanbooruDownloader:
         self.oFileLock = threading.Lock()
         self.dProgress = {"total": 0, "completed": 0, "description": "Idle"}
         self._bCancelled = False
+        self._fnProgress = fnProgress
 
         self.oSession = self._fnCreateSession()
 
@@ -243,6 +246,12 @@ class DanbooruDownloader:
         if success:
             with self.oFileLock:
                 self.dProgress["completed"] += 1
+                if self._fnProgress:
+                    self._fnProgress(
+                        self.dProgress["total"],
+                        self.dProgress["completed"],
+                        self.dProgress["description"],
+                    )
         # 限速：每次下载后间隔至少 0.3 秒
         time.sleep(0.3)
 
