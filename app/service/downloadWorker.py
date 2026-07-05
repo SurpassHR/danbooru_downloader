@@ -30,6 +30,12 @@ class DownloadWorker(QObject):
         if self._downloader:
             self._downloader.fnCancel()
 
+    def getProgress(self) -> dict:
+        """Return current progress dict: {total, completed, description}."""
+        if self._downloader:
+            return self._downloader.fnGetProgress()
+        return {"total": 0, "completed": 0, "description": "Idle"}
+
     def _run(self):
         """Execute download (runs in background thread)."""
         try:
