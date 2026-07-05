@@ -10,6 +10,7 @@ from qfluentwidgets import (
 )
 
 from ...service.downloadWorker import DownloadWorker
+from ...widget.tagAutocomplete import TagAutocomplete
 
 
 class DownloadPage(QFrame):
@@ -55,7 +56,7 @@ class DownloadPage(QFrame):
             "输入要搜索的标签，多个标签用空格分隔。支持 OR / NOT 语法。", card
         )
 
-        self.tagInput = LineEdit(card)
+        self.tagInput = TagAutocomplete(card)
         self.tagInput.setPlaceholderText("例如: mery_(yangmalgage) hyouka")
 
         cardLayout.addWidget(title)

@@ -8,3 +8,5 @@ pyinstaller==6.14.2
 # User app dependencies
 requests
 tqdm
+# 用于绕过 Cloudflare 的 TLS 指纹模拟（Danbooru API 使用）
+curl_cffi
