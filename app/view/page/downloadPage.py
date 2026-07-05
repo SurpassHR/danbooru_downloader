@@ -26,7 +26,7 @@ class DownloadPage(QFrame):
         self._thread = None
         self._worker = None
         self._pollTimer = QTimer(self)
-        self._pollTimer.setInterval(500)
+        self._pollTimer.setInterval(2000)
         self._pollTimer.timeout.connect(self._pollProgress)
 
         # --- Build UI ---
@@ -98,7 +98,7 @@ class DownloadPage(QFrame):
         threadRow.addWidget(BodyLabel("下载线程:", card))
         self.urlThreadsBox = SpinBox(card)
         self.urlThreadsBox.setRange(1, 20)
-        self.urlThreadsBox.setValue(10)
+        self.urlThreadsBox.setValue(5)
         threadRow.addWidget(self.urlThreadsBox)
 
         threadRow.addStretch(1)
@@ -274,18 +274,28 @@ class DownloadPage(QFrame):
     # ---- Config persistence ----
 
     def _restoreSavedState(self):
-        """从配置恢复上次退出前保存的标签和下载路径。"""
+        """从配置恢复上次退出前保存的标签、下载路径和线程数。"""
         savedTags = getConfig("download_page.last_tags", "")
         if savedTags:
+            self.tagInput.blockSignals(True)
             self.tagInput.setText(savedTags)
+            self.tagInput.blockSignals(False)
         savedPath = getConfig("download_page.last_path", "")
         if savedPath:
             self.pathInput.setText(savedPath)
+        savedPageThreads = getConfig("download_page.page_threads", None)
+        if savedPageThreads is not None:
+            self.pageThreadsBox.setValue(savedPageThreads)
+        savedUrlThreads = getConfig("download_page.url_threads", None)
+        if savedUrlThreads is not None:
+            self.urlThreadsBox.setValue(savedUrlThreads)
 
     def _saveCurrentState(self):
-        """将当前标签和下载路径保存到配置。"""
+        """将当前标签、下载路径和线程数保存到配置。"""
         setConfig("download_page.last_tags", self.tagInput.text().strip())
         setConfig("download_page.last_path", self.pathInput.text().strip())
+        setConfig("download_page.page_threads", self.pageThreadsBox.value())
+        setConfig("download_page.url_threads", self.urlThreadsBox.value())
 
     def hideEvent(self, event):
         """页面隐藏（切换标签页/关闭窗口）时自动保存当前配置。"""

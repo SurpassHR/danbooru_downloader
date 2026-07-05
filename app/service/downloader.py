@@ -69,8 +69,9 @@ class DanbooruDownloader:
     # ------------------------------------------------------------------
 
     def fnGetProgress(self) -> dict:
-        """返回当前下载进度。"""
-        return self.dProgress
+        """返回当前下载进度的快照（线程安全）。"""
+        with self.oFileLock:
+            return dict(self.dProgress)
 
     def fnCancel(self):
         """请求取消下载。"""
@@ -182,16 +183,20 @@ class DanbooruDownloader:
             return
 
         with ThreadPool(processes=self.iUrlFetchingThreads) as oPool:
-            list(
-                tqdm(
-                    oPool.imap_unordered(self._fnDownloadSingleFile, urls_to_download),
-                    total=len(urls_to_download),
-                    desc="Downloading images",
-                )
-            )
+            it = oPool.imap_unordered(self._fnDownloadSingleFile, urls_to_download)
+            for _ in tqdm(
+                it,
+                total=len(urls_to_download),
+                desc="Downloading images",
+            ):
+                if self._bCancelled:
+                    oPool.terminate()
+                    break
 
     def _fnDownloadSingleFile(self, sUrl: str):
         """下载单个文件，支持断点续传。超时/429 时自动重试。"""
+        if self._bCancelled:
+            return
         sFilename = os.path.basename(sUrl)
         sFilepath = os.path.join(self.sImageDownloadPath, sFilename)
         sTempFilepath = sFilepath + ".part"
