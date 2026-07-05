@@ -1,0 +1,12 @@
+# GUI template dependencies
+PySide6-Essentials==6.9.1
+PySide6-Fluent-Widgets==1.8.3
+rich==14.0.0
+pyinstaller==6.14.2
+# AppKit
+
+# User app dependencies
+requests
+tqdm
+# 用于绕过 Cloudflare 的 TLS 指纹模拟（Danbooru API 使用）
+curl_cffi
