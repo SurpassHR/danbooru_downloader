@@ -45,10 +45,10 @@ def _platformSettings(window: AppFluentWindow):
 def startApp():
     _setAppAttrs()
 
-    app = SingletonApplication(sys.argv, "DownloadXiaoeknowVideo")
+    app = SingletonApplication(sys.argv, "DanbooruDownloader")
 
     # set your window title here
-    window = AppFluentWindow(window_title="Change Me!")
+    window = AppFluentWindow(window_title="Danbooru Downloader")
     _platformSettings(window=window)
     window.show()
 

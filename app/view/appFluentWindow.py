@@ -15,7 +15,7 @@ from ..common.levelDefs import LogLevels, MsgBoxLevels
 from ..common.simpleLogger import loggerPrint
 from ..common.configLoader import getConfig, setConfig
 from ..common.uiFunctionBase import uiFuncBase
-from ..view.page.examplePage import ExamplePage
+from ..view.page.downloadPage import DownloadPage
 
 
 class AppFluentWindow(FluentWindow):
@@ -82,7 +82,7 @@ class AppFluentWindow(FluentWindow):
     def addPages(self) -> None:
         # add your page here
         self.addSubInterface(
-            ExamplePage("_examplePage", self), FluentIcon.SETTING, "示例页面", NavigationItemPosition.SCROLL
+            DownloadPage("_downloadPage", self), FluentIcon.DOWNLOAD, "下载", NavigationItemPosition.SCROLL
         )
         self.addProjectMainPageHyperlink()
         self.addThemeChangingWidget()
@@ -90,7 +90,7 @@ class AppFluentWindow(FluentWindow):
     def addProjectMainPageHyperlink(self) -> None:
         def _openProjectPage() -> None:
             # add your project link here
-            QDesktopServices.openUrl(QUrl("https://www.baidu.com"))
+            QDesktopServices.openUrl(QUrl("https://github.com/SurpassHR/danbooru_downloader"))
 
         self.navigationInterface.addWidget(
             routeKey="projectMainPageHyperlink",
