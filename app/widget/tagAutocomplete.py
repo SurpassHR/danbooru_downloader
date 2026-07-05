@@ -10,7 +10,7 @@ from curl_cffi import requests as cffi_requests
 
 from PySide6.QtCore import QThread, Signal, QTimer, Qt
 from PySide6.QtWidgets import QListWidget
-from qfluentwidgets import LineEdit
+from qfluentwidgets import LineEdit, isDarkTheme
 
 from ..common.simpleLogger import loggerPrint
 from ..common.levelDefs import LogLevels
@@ -133,19 +133,43 @@ class TagAutocomplete(LineEdit):
         self._debounce.timeout.connect(self._doRequest)
 
         self._popup = QListWidget(self)
-        self._popup.setWindowFlags(Qt.Popup)
+        self._popup.setWindowFlags(Qt.Tool | Qt.FramelessWindowHint)
         self._popup.setFocusProxy(self)
         self._popup.setMaximumHeight(300)
         self._popup.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self._popup.itemClicked.connect(self._onItemClicked)
+        self._popup.setObjectName("tagAutocompletePopup")
+        self._popup.setUniformItemSizes(True)
+        self._popup.setStyleSheet(self._buildPopupStyle())
         self._popup.hide()
 
+        # 监听主题切换，更新弹出样式
+        try:
+            from qfluentwidgets import qApp
+            qApp.themeChanged.connect(self._onThemeChanged)
+        except Exception:
+            pass
+
+        from PySide6.QtWidgets import QApplication
         self.installEventFilter(self)
+        self._popup.installEventFilter(self)
+        QApplication.instance().installEventFilter(self)
 
         self.textChanged.connect(self._onTextChanged)
 
     def eventFilter(self, obj, event):
-        if obj == self and self._popup.isVisible():
+        # 全局：点击弹出窗口外部时关闭
+        if event.type() == event.Type.MouseButtonPress:
+            if self._popup.isVisible():
+                try:
+                    pos = event.globalPosition().toPoint()
+                except AttributeError:
+                    pos = event.globalPos()
+                if not self._popup.geometry().contains(pos):
+                    self._hidePopup()
+
+        # 键盘：弹出窗口可见时处理导航
+        if obj in (self, self._popup) and self._popup.isVisible():
             if event.type() == event.Type.KeyPress:
                 key = event.key()
                 if key == Qt.Key_Down:
@@ -217,8 +241,104 @@ class TagAutocomplete(LineEdit):
         popup_height = min(self._popup.count() * item_height + 4, 300)
         self._popup.setGeometry(pos.x(), pos.y(), popup_width, popup_height)
         self._popup.show()
-        self._popup.setFocus()
+        self._popup.show()
         loggerPrint(f"[AutoComplete] 弹出列表 ({len(items)} 项)", LogLevels.INFO)
+
+    def _buildPopupStyle(self, dark=None):
+        """根据主题生成弹出列表样式表。"""
+        if dark is None:
+            dark = isDarkTheme()
+        if dark:
+            return '''
+            QListWidget#tagAutocompletePopup {
+                background: #252525;
+                border: 1px solid rgba(255, 255, 255, 0.08);
+                border-radius: 8px;
+                padding: 4px;
+                outline: none;
+            }
+            QListWidget#tagAutocompletePopup QScrollBar:vertical {
+                width: 6px;
+                background: transparent;
+                margin: 0;
+            }
+            QListWidget#tagAutocompletePopup QScrollBar::handle:vertical {
+                background: rgba(255, 255, 255, 0.2);
+                min-height: 30px;
+                border-radius: 3px;
+            }
+            QListWidget#tagAutocompletePopup QScrollBar::handle:vertical:hover {
+                background: rgba(255, 255, 255, 0.35);
+            }
+            QListWidget#tagAutocompletePopup QScrollBar::add-line:vertical,
+            QListWidget#tagAutocompletePopup QScrollBar::sub-line:vertical {
+                height: 0;
+            }
+            QListWidget#tagAutocompletePopup QScrollBar::add-page:vertical,
+            QListWidget#tagAutocompletePopup QScrollBar::sub-page:vertical {
+                background: transparent;
+            }
+            QListWidget#tagAutocompletePopup::item {
+                padding: 6px 14px;
+                min-height: 28px;
+                border-radius: 4px;
+                font-size: 13px;
+                color: #ffffff;
+            }
+            QListWidget#tagAutocompletePopup::item:hover {
+                background: rgba(255, 255, 255, 0.06);
+            }
+            QListWidget#tagAutocompletePopup::item:selected {
+                background: rgba(96, 160, 255, 0.3);
+            }
+            '''
+        else:
+            return '''
+            QListWidget#tagAutocompletePopup {
+                background: #ffffff;
+                border: 1px solid rgba(0, 0, 0, 0.08);
+                border-radius: 8px;
+                padding: 4px;
+                outline: none;
+            }
+            QListWidget#tagAutocompletePopup QScrollBar:vertical {
+                width: 6px;
+                background: transparent;
+                margin: 0;
+            }
+            QListWidget#tagAutocompletePopup QScrollBar::handle:vertical {
+                background: rgba(0, 0, 0, 0.15);
+                min-height: 30px;
+                border-radius: 3px;
+            }
+            QListWidget#tagAutocompletePopup QScrollBar::handle:vertical:hover {
+                background: rgba(0, 0, 0, 0.25);
+            }
+            QListWidget#tagAutocompletePopup QScrollBar::add-line:vertical,
+            QListWidget#tagAutocompletePopup QScrollBar::sub-line:vertical {
+                height: 0;
+            }
+            QListWidget#tagAutocompletePopup QScrollBar::add-page:vertical,
+            QListWidget#tagAutocompletePopup QScrollBar::sub-page:vertical {
+                background: transparent;
+            }
+            QListWidget#tagAutocompletePopup::item {
+                padding: 6px 14px;
+                min-height: 28px;
+                border-radius: 4px;
+                font-size: 13px;
+                color: #000000;
+            }
+            QListWidget#tagAutocompletePopup::item:hover {
+                background: rgba(0, 0, 0, 0.06);
+            }
+            QListWidget#tagAutocompletePopup::item:selected {
+                background: rgba(96, 160, 255, 0.15);
+            }
+            '''
+
+    def _onThemeChanged(self):
+        self._popup.setStyleSheet(self._buildPopupStyle())
 
     def _hidePopup(self):
         if self._popup.isVisible():
@@ -253,6 +373,6 @@ class TagAutocomplete(LineEdit):
             spaceAfter = " " + fullText[wordEnd:]
 
         newText = fullText[:wordStart] + completion + spaceAfter
-        self._activating = False
         self.setText(newText)
+        self._activating = False
         self.setCursorPosition(wordStart + len(completion) + 1)
