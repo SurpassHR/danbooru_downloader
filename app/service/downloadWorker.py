@@ -31,13 +31,7 @@ class DownloadWorker(QObject):
             self._downloader.fnCancel()
 
     def getProgress(self) -> dict:
-        """Get current download progress."""
-        if self._downloader:
-            return self._downloader.fnGetProgress()
-        return {"total": 0, "completed": 0, "description": "Idle"}
-
-    def getProgress(self) -> dict:
-        """Return current progress dict: {total, completed, description}."""
+        """Get current download progress: {total, completed, description}."""
         if self._downloader:
             return self._downloader.fnGetProgress()
         return {"total": 0, "completed": 0, "description": "Idle"}

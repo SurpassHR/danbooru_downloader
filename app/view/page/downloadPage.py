@@ -166,10 +166,14 @@ class DownloadPage(QFrame):
         pageThreads = self.pageThreadsBox.value()
         urlThreads = self.urlThreadsBox.value()
 
-        # Disable UI
+        # Disable UI during download
         self.startBtn.setEnabled(False)
         self.stopBtn.setEnabled(True)
         self.tagInput.setEnabled(False)
+        self.pathInput.setEnabled(False)
+        self.browseBtn.setEnabled(False)
+        self.pageThreadsBox.setEnabled(False)
+        self.urlThreadsBox.setEnabled(False)
         self.progressBar.setValue(0)
         self.logOutput.clear()
 
@@ -199,7 +203,7 @@ class DownloadPage(QFrame):
             self._worker.cancel()
 
     def _pollProgress(self):
-        if not self._worker or not self._worker._downloader:
+        if not self._worker:
             return
         try:
             prog = self._worker.getProgress()
@@ -226,6 +230,10 @@ class DownloadPage(QFrame):
         self.startBtn.setEnabled(True)
         self.stopBtn.setEnabled(False)
         self.tagInput.setEnabled(True)
+        self.pathInput.setEnabled(True)
+        self.browseBtn.setEnabled(True)
+        self.pageThreadsBox.setEnabled(True)
+        self.urlThreadsBox.setEnabled(True)
 
         if success:
             self._log("下载完成！")
