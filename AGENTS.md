@@ -76,18 +76,17 @@
 - [x] 单实例检查
 - [x] 暗/亮主题切换
 - [x] 日志系统
+- [x] 下载器取消支持（`fnCancel` / `fnIsCancelled`）
+- [x] 下载页面（`DownloadPage`）：标签输入、配置选项、进度显示、运行日志
+- [x] 后台下载（`DownloadWorker` + `QThread` + 轮询进度）
+- [x] 修复窗口标题：`Change Me!` → `Danbooru Downloader`
+- [x] 修复单实例 ID：`DownloadXiaoeknowVideo` → `DanbooruDownloader`
+- [x] 修复项目主页链接：百度 → GitHub
 
-### 待完成（GUI 集成）
+### 待完成
 
-- [ ] 将 `DanbooruDownloader` 集成到 GUI 页面
-  - 标签输入（用 `TextAreaCard`）
-  - 下载进度显示（用 `ProgressCard`）
-  - 配置选项（线程数、路径选择等）
 - [ ] 将下载器配置从硬编码迁移到 `config.json`
-- [ ] 在 GUI 中显示下载结果
-- [ ] 修复 `app/app.py:47` 中硬编码的 `"Change Me!"` 标题 → 改为 `"Danbooru Downloader"`
-- [ ] 修复 `app/app.py:45` 中错误的单实例标识 `"DownloadXiaoeknowVideo"` → 改为 `"DanbooruDownloader"`
-- [ ] 修复 `app/view/appFluentWindow.py:94` 中项目主页链接指向百度 → 改为 `https://github.com/SurpassHR/danbooru_downloader`
+- [ ] 下载完成后的结果展示页面
 
 ---
 
