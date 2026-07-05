@@ -1,0 +1,9 @@
+{
+  "theme": "dark",
+  "download_page": {
+    "last_tags": "",
+    "last_path": "./downloads",
+    "page_threads": 5,
+    "url_threads": 5
+  }
+}
