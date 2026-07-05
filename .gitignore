@@ -1,6 +1,42 @@
-.vscode
-log
-.venv
-downloads
+# --- Runtime / Cache ---
+downloads/
+log/
+*.jsonl
 cache_page_urls.json
 cache_image_urls.json
+
+# --- Virtual Environment ---
+.venv/
+venv/
+.env
+.env.local
+
+# --- Python Bytecode ---
+__pycache__/
+*.py[cod]
+*.pyo
+*.egg-info/
+*.egg
+dist/
+build/
+*.spec
+
+# --- Lint / Type Check ---
+.ruff_cache/
+.mypy_cache/
+.pytest_cache/
+
+# --- CodeGraph / Pi / Tooling ---
+.codegraph/
+.pi-subagents/
+
+# --- IDE / Editor ---
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# --- OS ---
+.DS_Store
+Thumbs.db
