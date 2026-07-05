@@ -76,6 +76,9 @@ class DanbooruDownloader:
 
         urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
+        # --- Cancellation Support ---
+        self._bCancelled = False
+
     def _fnCreateSession(self) -> requests.Session:
         """
         Creates a requests session with a robust retry strategy that handles
@@ -114,6 +117,11 @@ class DanbooruDownloader:
         """Returns the current download progress."""
         return self.dProgress
 
+    def fnCancel(self):
+        """Requests cancellation of the download process."""
+        self._bCancelled = True
+        print("Cancellation requested...")
+
     def fnDownload(self):
         """Starts the download process with robust error handling and resumption."""
         try:
@@ -121,17 +129,26 @@ class DanbooruDownloader:
             self.dProgress["description"] = "Fetching post page URLs..."
             lsAllPostPageUrls = self._fnFetchPostPageUrls()
 
+            if self._bCancelled:
+                print("Download cancelled after fetching page URLs.")
+                return
+
             self.dProgress["description"] = "Fetching direct image URLs..."
             dictAllImageUrls = self._fnFetchImageUrls(lsAllPostPageUrls)
+
+            if self._bCancelled:
+                print("Download cancelled after fetching image URLs.")
+                return
 
             self.dProgress["description"] = "Downloading images..."
             # We pass the values (direct image URLs) of the map to the downloader
             self._fnDownloadImages(list(dictAllImageUrls.values()))
 
-            print("\n--- Download Summary ---")
-            print(f"Added {self.iNewPageUrlsCount} new page URLs.")
-            print(f"Added {self.iNewImageUrlsCount} new image URL mappings.")
-            print("Download process finished successfully.")
+            if not self._bCancelled:
+                print("\n--- Download Summary ---")
+                print(f"Added {self.iNewPageUrlsCount} new page URLs.")
+                print(f"Added {self.iNewImageUrlsCount} new image URL mappings.")
+                print("Download process finished successfully.")
 
         except Exception as e:
             print(f"\nAn unexpected error occurred: {e}")

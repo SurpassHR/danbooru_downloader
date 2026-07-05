@@ -10,9 +10,18 @@ from .view.appFluentWindow import AppFluentWindow
 
 
 def _setAppAttrs():
-    QApplication.setHighDpiScaleFactorRoundingPolicy(Qt.HighDpiScaleFactorRoundingPolicy.PassThrough)
+    # PassThrough: 保留精确分数缩放比，防止 Windows 上模糊
+    # Floor: 向下取整，Linux 下常见 1.25×~1.75× 均降为 1×，避免文字过大
+    #        只有 ≥2.0 的高分屏才生效
+    if sys.platform.startswith("linux"):
+        policy = Qt.HighDpiScaleFactorRoundingPolicy.Floor
+    elif sys.platform == "darwin":
+        policy = Qt.HighDpiScaleFactorRoundingPolicy.PassThrough
+    else:
+        policy = Qt.HighDpiScaleFactorRoundingPolicy.PassThrough
+    QApplication.setHighDpiScaleFactorRoundingPolicy(policy)
     QApplication.setAttribute(Qt.ApplicationAttribute.AA_DontCreateNativeWidgetSiblings)
-    QApplication.setAttribute(Qt.ApplicationAttribute.AA_EnableHighDpiScaling)
+    # Qt 6 已默认启用 HighDpiScaling，不再需要显式设置
     QApplication.setAttribute(Qt.ApplicationAttribute.AA_UseHighDpiPixmaps)
 
 
